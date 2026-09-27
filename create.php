@@ -1,0 +1,81 @@
+<?php
+require_once "../config/db.php";
+
+$errors = [];
+$name = trim($_POST["name"] ?? "");
+$category = trim($_POST["category"] ?? "");
+$price = $_POST["price"] ?? "";
+$stock = $_POST["stock"] ?? "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $priceValue = filter_var($price, FILTER_VALIDATE_FLOAT);
+    $stockValue = filter_var($stock, FILTER_VALIDATE_INT);
+
+    if (mb_strlen($name) < 3) $errors["name"] = "Nama minimal 3 karakter.";
+    if ($category === "") $errors["category"] = "Kategori wajib dipilih.";
+    if ($priceValue === false || $priceValue <= 0) $errors["price"] = "Harga harus lebih dari 0.";
+    if ($stockValue === false || $stockValue < 0) $errors["stock"] = "Stok tidak boleh negatif.";
+
+    if (!$errors) {
+        try {
+            $stmt = $pdo->prepare("INSERT INTO products (name, category, price, stock) VALUES (:name, :category, :price, :stock)");
+            $stmt->execute([
+                "name" => $name,
+                "category" => $category,
+                "price" => $priceValue,
+                "stock" => $stockValue
+            ]);
+            header("Location: index.php?status=created");
+            exit;
+        } catch (PDOException $e) {
+            $errors["name"] = "Nama buket sudah ada. Gunakan nama lain.";
+        }
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tambah Buket | SweetBloom</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="navbar">
+    <div class="brand">🌷 Sweet<span>Bloom</span></div>
+    <a href="index.php" class="btn btn-dark">← Kembali</a>
+</header>
+<main class="form-container">
+    <div class="form-card">
+        <p class="eyebrow">NEW COLLECTION</p>
+        <h1>Tambah Buket 🌸</h1>
+        <p class="muted">Masukkan informasi buket baru ke dalam koleksi SweetBloom.</p>
+        <form method="POST">
+            <label>Nama Buket</label>
+            <input name="name" minlength="3" required value="<?= htmlspecialchars($name, ENT_QUOTES, "UTF-8") ?>" placeholder="Contoh: Rose Sweet Love">
+            <?php if (isset($errors["name"])): ?><small class="error"><?= $errors["name"] ?></small><?php endif; ?>
+
+            <label>Kategori</label>
+            <select name="category" required>
+                <option value="">-- Pilih kategori --</option>
+                <?php foreach (["Mawar","Bunga Matahari","Baby Breath","Mix Flower","Tulip"] as $c): ?>
+                    <option <?= $category === $c ? "selected" : "" ?>><?= $c ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (isset($errors["category"])): ?><small class="error"><?= $errors["category"] ?></small><?php endif; ?>
+
+            <label>Harga</label>
+            <input type="number" name="price" min="1" required value="<?= htmlspecialchars($price, ENT_QUOTES, "UTF-8") ?>" placeholder="150000">
+            <?php if (isset($errors["price"])): ?><small class="error"><?= $errors["price"] ?></small><?php endif; ?>
+
+            <label>Stok</label>
+            <input type="number" name="stock" min="0" required value="<?= htmlspecialchars($stock, ENT_QUOTES, "UTF-8") ?>" placeholder="10">
+            <?php if (isset($errors["stock"])): ?><small class="error"><?= $errors["stock"] ?></small><?php endif; ?>
+
+            <button class="btn btn-primary full" type="submit">🌷 Simpan Buket</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>
